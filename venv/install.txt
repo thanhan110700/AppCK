@@ -1,0 +1,6 @@
+PyQt5
+matplotlib
+sys
+numpy
+opencv-python
+PIL

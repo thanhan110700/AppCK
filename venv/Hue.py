@@ -1,6 +1,6 @@
 import numpy as np
 import cv2 as cv
-def changeBrightness(img,value):
+def changeHue(img,value):
     hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
     h, s, v = cv.split(hsv)
     if (value >= 0):

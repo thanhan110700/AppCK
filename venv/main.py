@@ -9,13 +9,8 @@ import cv2 as cv
 from PIL import Image
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-import blur,gamma,brightness,histogram,daoanh
-class MplCanvas(FigureCanvasQTAgg):
+import blur,gamma,Hue,histogram,daoanh,saturation
 
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
-        super(MplCanvas, self).__init__(fig)
 class Window(QWidget):
     def __init__(self):
         super().__init__()
@@ -27,10 +22,10 @@ class Window(QWidget):
         self.InitWindow()
         self.setStyleSheet("background-color:#3F3F3F")
         self.clickbtnDaoanh = 0
-        self.brightness_value_now = 0
+        self.hue_value_now = 0
         self.gamma_value_now = 1
         self.blur_value_now = 0
-        self.logarit_value_now = 0
+        self.saturation_value_now = 0
         self.filename = None
         self.tmp = None
         self.old_imagePath = "None"
@@ -106,24 +101,44 @@ class Window(QWidget):
         vboxGamma.addWidget(self.lblNumGamma)
         vboxGamma.addWidget(self.sliGamma)
 
-        # Brigthness
-        vboxBrigthness = QVBoxLayout()
-        self.lblNumBri = QLabel('1')
-        self.lblNumBri.setStyleSheet("color:white")
-        self.lblNumBri.setAlignment(Qt.AlignRight)
-        lblBrigthness = QLabel("Brigthness")
-        lblBrigthness.setStyleSheet("color:white")
-        self.sliBrigthness = QSlider(Qt.Horizontal)
-        self.sliBrigthness.setDisabled(True)
-        self.sliBrigthness.setMinimum(-100)
-        self.sliBrigthness.setMaximum(100)
-        self.sliBrigthness.setTickInterval(0)
+        # Saturation
+        vboxSaturation = QVBoxLayout()
+        self.lblNumSaturation = QLabel('1')
+        self.lblNumSaturation.setStyleSheet("color:white")
+        self.lblNumSaturation.setAlignment(Qt.AlignRight)
+        lblSaturation = QLabel("Saturation")
+        lblSaturation.setStyleSheet("color:white")
+        self.sliSaturation = QSlider(Qt.Horizontal)
+        self.sliSaturation.setDisabled(True)
+        self.sliSaturation.setMinimum(-100)
+        self.sliSaturation.setMaximum(100)
+        self.sliSaturation.setTickInterval(0)
 
-        self.sliBrigthness.valueChanged.connect(self.value_changed_Brightness)  # Inside __init__() function
-        self.lblNumBri.setText(self.sliBrigthness.value().__str__())
-        vboxBrigthness.addWidget(lblBrigthness)
-        vboxBrigthness.addWidget(self.lblNumBri)
-        vboxBrigthness.addWidget(self.sliBrigthness)
+        self.sliSaturation.valueChanged.connect(self.value_changed_Saturation)  # Inside __init__() function
+        self.lblNumSaturation.setText(self.sliSaturation.value().__str__())
+        vboxSaturation.addWidget(lblSaturation)
+        vboxSaturation.addWidget(self.lblNumSaturation)
+        vboxSaturation.addWidget(self.sliSaturation)
+
+        # HUE
+        vboxHue = QVBoxLayout()
+        self.lblNumHue = QLabel('1')
+        self.lblNumHue.setStyleSheet("color:white")
+        self.lblNumHue.setAlignment(Qt.AlignRight)
+        lblHue = QLabel("Hue")
+        lblHue.setStyleSheet("color:white")
+        self.sliHue = QSlider(Qt.Horizontal)
+        self.sliHue.setDisabled(True)
+        self.sliHue.setMinimum(-100)
+        self.sliHue.setMaximum(100)
+        self.sliHue.setTickInterval(0)
+
+        self.sliHue.valueChanged.connect(self.value_changed_Hue)  # Inside __init__() function
+        self.lblNumHue.setText(self.sliHue.value().__str__())
+        vboxHue.addWidget(lblHue)
+        vboxHue.addWidget(self.lblNumHue)
+        vboxHue.addWidget(self.sliHue)
+
 
         # BLur
         vboxBLur = QVBoxLayout()
@@ -160,7 +175,8 @@ class Window(QWidget):
         vboxRight.setAlignment(Qt.AlignTop)
         vboxRight.addLayout(vboxHistgram,5)
         vboxRight.addLayout(vboxGamma,1)
-        vboxRight.addLayout(vboxBrigthness, 1)
+        vboxRight.addLayout(vboxHue, 1)
+        vboxRight.addLayout(vboxSaturation, 1)
         vboxRight.addLayout(vboxBLur, 1)
         vboxRight.addLayout(hboxButton,1)
         hboxBig.addLayout(vboxRight,1)
@@ -184,10 +200,14 @@ class Window(QWidget):
 
         self.update()
 
-    ############# Value Brightness
-    def value_changed_Brightness(self,value):
-        self.brightness_value_now = value
-        self.lblNumBri.setText(value.__str__())
+    ############# Value Hue
+    def value_changed_Hue(self,value):
+        self.hue_value_now = value
+        self.lblNumHue.setText(value.__str__())
+        self.update()
+    def value_changed_Saturation(self,value):
+        self.saturation_value_now = value
+        self.lblNumSaturation.setText(value.__str__())
         self.update()
 
     ############# Value Blur
@@ -221,7 +241,8 @@ class Window(QWidget):
     ######UPDATE FUNTION
     def update(self):
         img = gamma.changeGamma(self.im, self.gamma_value_now)
-        img = brightness.changeBrightness(img, self.brightness_value_now)
+        img = Hue.changeHue(img, self.hue_value_now)
+        img = saturation.changeSaturation(img, self.saturation_value_now)
         img = blur.changeBlur(img,self.blur_value_now)
         if(self.clickbtnDaoanh==1):
             img = daoanh.dao_anh(img)
@@ -232,8 +253,12 @@ class Window(QWidget):
     ######## SAVE IMAGE FUNCTION
     def saveImage(self):
         filename = QFileDialog.getSaveFileName(filter="JPG(*.jpg);;PNG(*.png);;TIFF(*.tiff);;BMP(*.bmp)")[0]
-        cv.imwrite(filename, self.tmp)
-        print('Image saved as:', self.filename)
+        if(filename!=''):
+            cv.imwrite(filename, self.tmp)
+            print('Image saved as:', self.filename)
+        else:
+            print("don't save")
+
     ########## OPEN IMAGE FUNCTION
     def getImage(self):
         path_img = QFileDialog.getOpenFileName(filter="Image (*.*)")
@@ -246,7 +271,8 @@ class Window(QWidget):
             self.im = cv.imread(imagePath)
             self.sliBlur.setEnabled(True)
             self.sliGamma.setEnabled(True)
-            self.sliBrigthness.setEnabled(True)
+            self.sliSaturation.setEnabled(True)
+            self.sliHue.setEnabled(True)
             self.setImage(self.im)
         if (path_img[0] != "" and self.old_imagePath != "None"):
 
@@ -254,8 +280,9 @@ class Window(QWidget):
             self.filename = imagePath
             self.im = cv.imread(imagePath)
             self.sliBlur.setTickInterval(0)
+            self.sliSaturation.setTickInterval(0)
             self.sliGamma.setTickInterval(0)
-            self.sliBrigthness.setTickInterval(0)
+            self.sliHue.setTickInterval(0)
 
             self.setImage(self.im)
         if (path_img[0] == "" and self.old_imagePath != "None"):
